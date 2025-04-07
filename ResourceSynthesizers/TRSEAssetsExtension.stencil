@@ -1,0 +1,88 @@
+// swiftlint:disable all
+// swift-format-ignore-file
+
+{% set enumName %}{{param.name}}Asset{% endset %}
+{% set colorType %}{{param.name}}Colors{% endset %}
+{% set imageType %}{{param.name}}Images{% endset %}
+{% set accessModifier %}{% if param.publicAccess %}public{% else %}internal{% endif %}{% endset %}
+
+#if os(macOS)
+import AppKit
+#elseif os(iOS) || os(tvOS) || os(watchOS)
+import UIKit
+#endif
+
+#if canImport(SwiftUI)
+import SwiftUI
+#endif
+
+
+
+// MARK: - Asset Extensions
+
+{% macro extensionCases assets framework type %}
+    {% for asset in assets %}
+        {% set assetName %}{{asset.name|swiftIdentifier:"pretty"|lowerFirstWord|escapeReservedKeywords}}{% endset %}
+        {% if type == "color" and asset.type == "color" %}
+            {% if framework == "swiftui" %}
+        {{accessModifier}} static let {{assetName}} = {{enumName}}.{{assetName}}.swiftUIColor
+            {% else %}
+        {{accessModifier}} static let {{assetName}} = {{enumName}}.{{assetName}}.color
+            {% endif %}
+        {% elif type == "image" and (asset.type == "image" or asset.type == "symbol") %}
+            {% if framework == "swiftui" %}
+        {{accessModifier}} static let {{assetName}} = {{enumName}}.{{assetName}}.swiftUIImage
+            {% else %}
+        {{accessModifier}} static let {{assetName}} = {{enumName}}.{{assetName}}.image
+            {% endif %}
+        {% elif asset.items %}
+            {% call extensionCases asset.items framework type %}
+        {% endif %}
+    {% endfor %}
+{% endmacro %}
+
+#if os(macOS)
+
+{{accessModifier}} extension NSImage {
+    enum assets {
+        {% call extensionCases catalogs.first.assets "appkit" "image" %}
+    }
+}
+
+{{accessModifier}} extension NSColor {
+    enum assets {
+        {% call extensionCases catalogs.first.assets "appkit" "color" %}
+    }
+}
+
+#elseif os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+
+{{accessModifier}} extension UIImage {
+    enum assets {
+        {% call extensionCases catalogs.first.assets "uikit" "image" %}
+    }
+}
+
+{{accessModifier}} extension UIColor {
+    enum assets {
+        {% call extensionCases catalogs.first.assets "uikit" "color" %}
+    }
+}
+
+#endif
+
+#if canImport(SwiftUI)
+
+{{accessModifier}} extension Image {
+    enum assets {
+        {% call extensionCases catalogs.first.assets "swiftui" "image" %}
+    }
+}
+
+{{accessModifier}} extension Color {
+    enum assets {
+        {% call extensionCases catalogs.first.assets "swiftui" "color" %}
+    }
+}
+
+#endif
