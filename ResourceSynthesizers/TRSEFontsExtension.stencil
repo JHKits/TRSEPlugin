@@ -1,0 +1,85 @@
+// swiftlint:disable all
+// swift-format-ignore-file
+
+#if os(macOS)
+import AppKit
+#elseif os(iOS) || os(tvOS) || os(watchOS)
+import UIKit
+#endif
+
+#if canImport(SwiftUI)
+import SwiftUI
+#endif
+
+// MARK: - Fonts Extensions
+
+{% if families %}
+{% set fontFamilyName %}{{param.name}}FontFamily{% endset %}
+{% set fontType %}{{param.name}}FontConvertible{% endset %}
+{% set accessModifier %}{% if param.publicAccess %}public{% else %}internal{% endif %}{% endset %}
+
+public extension {{fontFamilyName}} {
+    {% for family in families %}
+    {% set familyName %}{{family.name|swiftIdentifier:"pretty"|escapeReservedKeywords}}{% endset %}
+    {% set fontWeightName %}{{familyName}}Weight{% endset %}
+    // MARK: - {{familyName}}
+    
+    enum {{fontWeightName}} {
+        {% for font in family.fonts %}
+        case {{font.style|swiftIdentifier:"pretty"|lowerFirstWord|escapeReservedKeywords}}
+        {% endfor %}
+    }
+    
+    static func {{familyName|lowerFirstWord}}(weight: {{fontWeightName}}) -> {{fontType}} {
+        return switch weight {
+        {% for font in family.fonts %}
+        case .{{font.style|swiftIdentifier:"pretty"|lowerFirstWord|escapeReservedKeywords}}:
+            {{fontFamilyName}}.{{familyName}}.{{font.style|swiftIdentifier:"pretty"|lowerFirstWord|escapeReservedKeywords}}
+        {% endfor %}
+        }
+    }
+    
+    {% endfor %}
+}
+
+{% macro extensionFunction framework %}
+{% set returnType %}{% if framework == "swiftui" %}Font{% else %}{{fontType}}.Font{% endif %}{% endset %}
+{% for family in families %}
+    {% set familyName %}{{family.name|swiftIdentifier:"pretty"|escapeReservedKeywords}}{% endset %}
+    {% set fontWeightName %}{{familyName}}Weight{% endset %}
+    static func {{familyName|lowerFirstWord}}(weight: {{fontFamilyName}}.{{fontWeightName}}, size: CGFloat) -> {{returnType}} {
+        {% if framework == "swiftui" %}
+        return {{fontFamilyName}}.{{familyName|lowerFirstWord}}(weight: weight).swiftUIFont(size: size)
+        {% else %}
+        return {{fontFamilyName}}.{{familyName|lowerFirstWord}}(weight: weight).font(size: size)
+        {% endif %}
+    }
+    
+{% endfor %}
+{% endmacro %}
+
+#if os(macOS)
+
+{{accessModifier}} extension NSFont {
+    {% call extensionFunction "appkit" %}
+}
+
+#elseif os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+
+{{accessModifier}} extension UIFont {
+    {% call extensionFunction "uikit" %}
+}
+
+#endif
+
+#if canImport(SwiftUI)
+
+{{accessModifier}} extension Font {
+    {% call extensionFunction "swiftui" %}
+}
+
+#endif
+
+{% else %}
+// No fonts found
+{% endif %}
