@@ -1,5 +1,7 @@
 # TRSEPlugin
 
+![TRSEPlugin Tag](https://img.shields.io/github/v/tag/JHKits/TRSEPlugin)
+
 ### 📖 Overview
 
 **Tuist Resource Synthesizers Extension Plugin**
@@ -20,11 +22,14 @@
 
 ### 🛠️ Prepare
 
+> To do this, open your Tuist project for editing by running the following command in your project directory:
+> `tuist edit`
+
 To start using TRSEPlugin, follow these steps:
 
 **1. Add the plugin to your project configuration**
 
-In your Config.swift file:
+In your Tuist/Config.swift file:
 
 ```swift
 // Example
