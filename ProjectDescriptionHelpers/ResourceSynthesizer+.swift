@@ -8,17 +8,24 @@
 import ProjectDescription
 
 public extension ResourceSynthesizer {
-    static func assetsExtension() -> Self {
+    static func assetsWithExtension() -> Self {
         .custom(plugin: "TRSEPlugin",
                 parser: .assets,
                 extensions: ["xcassets"],
                 resourceName:  "TRSEAssetsExtension")
     }
     
-    static func fontsExtension() -> Self {
+    static func fontsWithExtension() -> Self {
         .custom(plugin: "TRSEPlugin",
                 parser: .fonts,
-                extensions: Set(["ttf", "otf"]),
+                extensions: ["ttf", "otf"],
                 resourceName:  "TRSEFontsExtension")
+    }
+    
+    static func stringCatalogWithExtension() -> Self {
+        .custom(plugin: "TRSEPlugin",
+                parser: .json,
+                extensions: ["xcstrings"],
+                resourceName:  "TRSEStringCatalog")
     }
 }

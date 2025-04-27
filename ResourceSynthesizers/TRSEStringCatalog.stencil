@@ -1,0 +1,118 @@
+// Created by: Jeonhui
+// Copyright (c) 2025 Jeonhui
+// License: MIT
+{% set accessModifier %}{% if param.publicAccess %}public{% else %}internal{% endif %}{% endset %}
+{% set StringCatalogName %}{{param.name}}StringCatalog{% endset %}
+{% set LocalizedStringConvertibleName %}{{param.name}}LocalizedStringConvertible{% endset %}
+{% set extensionEnumName %}catalogs{% endset %}
+{% macro removedFormatStringKey stringKey %}{{ stringKey | replace: StringFormatSpecifierRegex, " Arg ", "regex" | swiftIdentifier: "pretty" | lowerFirstWord | escapeReservedKeywords }}{% endmacro %}
+{% set StringFormatSpecifierRegex %}%(@|d|D|i|u|U|x|X|o|O|f|e|E|g|G|c|C|s|S|p|a|A|F|hd|hi|hu|hx|hX|ho|hO|hhd|hhi|hhu|hhx|hhX|hho|hhO|ld|li|lu|lx|lX|lo|lO|lld|lli|llu|llx|llX|llo|llO|qd|qi|qu|qx|qX|qo|qO|Lf|Le|LE|Lg|LG|La|LA|LF|zd|zi|zu|zx|zX|zo|zO|td|ti|tu|tx|tX|to|tO|jd|ji|ju|jx|jX|jo|jO){% endset %}
+
+import Foundation
+
+{% if files %}
+// MARK: - String Catalog Extension
+{% macro stringExtensionStaticFunc table stringKey %}
+    {% set funcName %}{% call removedFormatStringKey stringKey %}{% endset %}
+        {{accessModifier}} static func {{ funcName }}(_ args: any CVarArg...) -> String {
+            {{ StringCatalogName }}.{{ funcName }}(args).localized
+        }
+    
+{% endmacro %}
+{% macro stringExtensionStaticFuncs table strings %}
+
+        // MARK: - {{ table }}
+        {% for stringKey in strings %}
+            {% call stringExtensionStaticFunc table stringKey %}
+        {% endfor %}
+{% endmacro %}
+
+{{accessModifier}} extension String {
+    enum {{ extensionEnumName }} {
+        {% for file in files %}
+            {% call stringExtensionStaticFuncs file.name file.documents[0].data.strings %}
+        {% endfor %}
+    }
+}
+
+{% endif %}
+{% if files %}
+// MARK: - String Catalog
+
+// swiftformat:disable all
+// swiftlint:disable all
+
+{% macro stringCatalogStaticFunc table stringKey %}
+    {% set funcName %}{% call removedFormatStringKey stringKey %}{% endset %}
+    {{accessModifier}} static func {{ funcName }}(_ args: any CVarArg...) -> {{ LocalizedStringConvertibleName }} {
+        {{ LocalizedStringConvertibleName }}(localized: "{{ stringKey }}", table: "{{file.name}}", args: args)
+    }
+    
+{% endmacro %}
+{% macro stringCatalogStaticFuncs table strings %}
+
+    // MARK: - {{ table }}
+    {% for stringKey in strings %}
+        {% call stringCatalogStaticFunc table stringKey %}
+    {% endfor %}
+{% endmacro %}
+{% macro stringCatalogFile file %}
+    {% call stringCatalogStaticFuncs file.name file.documents[0].data.strings %}
+{% endmacro %}
+
+{{accessModifier}} enum {{ StringCatalogName }} {
+    {% for file in files %}
+        {% call stringCatalogFile file %}
+    {% endfor %}
+}
+
+{{accessModifier}} struct {{ LocalizedStringConvertibleName }} {
+    {{accessModifier}} let key: String
+    {{accessModifier}} let args: [any CVarArg]
+    {{accessModifier}} let table: String?
+    {{accessModifier}} let comment: String
+    
+    private var localizedString: String {
+        let bundle = Bundle.module
+        return NSLocalizedString(key, tableName: table, bundle: bundle, comment: comment)
+    }
+    
+    {{accessModifier}} var localized: String {
+        return String(format: localizedString, args)
+    }
+    
+    {{accessModifier}} init(localized localizedKey: String,
+                table: String? = nil,
+                comment: String = "",
+                args: [any CVarArg] = []) {
+        self.key = localizedKey
+        self.args = args
+        self.table = table
+        self.comment = comment
+    }
+    
+    {{accessModifier}} init(localized localizedKey: String,
+                table: String? = nil,
+                comment: String = "",
+                args: any CVarArg...) {
+        self.init(localized: localizedKey,
+                  table: table,
+                  comment: comment,
+                  args: args)
+    }
+}
+
+{% if not param.bundle and not param.lookupFunction %}
+
+// swiftlint:disable convenience_type
+private final class BundleToken {
+    static let bundle: Bundle = {
+        Bundle(for: BundleToken.self)
+    }()
+}
+// swiftlint:enable convenience_type
+{% endif %}
+
+{% else %}
+// No files found
+{% endif %}
